@@ -10,6 +10,8 @@ struct lsList {
 	unsigned maxGroupLength;
 	unsigned maxSizeLength;
 	unsigned maxUserLength;
+	unsigned long totalFilesSize;
+	bool lFlag;
 };
 
 unsigned getNumberLength(int number);

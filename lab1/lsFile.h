@@ -7,6 +7,14 @@
 #include <pwd.h>
 #include <grp.h>
 #include <sys/stat.h>
+#include <stdbool.h>
+
+enum {
+	WHITE = 0,
+	GREEN,
+	BLUE,
+	CYAN
+};
 
 struct lsFile {
 	char permissions[10];
@@ -16,6 +24,8 @@ struct lsFile {
 	unsigned long size;
 	char mtime[12];
 	char* name;
+	char linkTo[256];
+	int color;
 };
 
 struct lsFile* lsFileInit();

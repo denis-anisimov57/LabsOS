@@ -3,18 +3,8 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include <errno.h>
-#include <string.h>
-#include <stdbool.h>
-#include <pwd.h>
 #include <sys/ioctl.h>
-#include <grp.h>
-#include <time.h>
-#include "lsFile.h"
 #include "lsList.h"
-
-char greenColor[] = "\x1b[32m";
-char resetColor[] = "\x1b[0m";
 
 int main(int argc, char** argv) {
 	char c;
@@ -49,6 +39,7 @@ int main(int argc, char** argv) {
 	int curWidth = 0;
 	struct stat d_info;
 	struct lsList* list = lsListInit();
+	list->lFlag = lFlag;
 	while(dir != NULL) {
 		char* path = malloc(sizeof(dirname) + sizeof(dir->d_name) + sizeof("/"));
 		strcpy(path, dirname);
@@ -63,35 +54,28 @@ int main(int argc, char** argv) {
 			free(path);
 			continue;
 		}
-		if(!lFlag) {
-			/*curWidth += getFilenameSize(dir->d_name);
-			struct winsize w;
-			ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-			if(curWidth > w.ws_col / 5) {
-				printf("\n");
-				curWidth = 0;
-			}*/
-			printf("%s ", dir->d_name);
-			//printf("%s(%d %d) ", dir->d_name, w.ws_col, curWidth);
+		struct lsFile* file = lsFileInit();
+		setPermissions(file, d_info.st_mode);
+		file->name = malloc(sizeof(dir->d_name));
+		setUser(file, d_info.st_uid);
+		setGroup(file, d_info.st_gid);
+		setMTime(file, d_info.st_mtime);
+		file->numlink = d_info.st_nlink;
+		file->size = d_info.st_size;
+		strcpy(file->name, dir->d_name);	
+		if(file->permissions[0] == 'l') {
+				int linkRes = readlink(path, file->linkTo, sizeof(file->linkTo));
+				if(linkRes == -1) {
+					fprintf(stderr, "Link error\n");
+				}
+				file->linkTo[linkRes] = '\0';
 		}
-		else {
-			struct lsFile* file = lsFileInit();
-			setPermissions(file, d_info.st_mode);
-			setUser(file, d_info.st_uid);
-			setGroup(file, d_info.st_gid);
-			setMTime(file, d_info.st_mtime);
-			file->numlink = d_info.st_nlink;
-			file->size = d_info.st_size;
-			file->name = malloc(sizeof(dir->d_name));
-			strcpy(file->name, dir->d_name);
-			addLsFile(list, file);		
-		}	
+		addLsFile(list, file);	
 		free(path);
 		dir = readdir(d);
 	}
 	printLsList(list);
 	deleteLsList(list);
-	printf("\n");
 	closedir(d);
 	return 0;
 }
