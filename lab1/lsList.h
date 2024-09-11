@@ -14,13 +14,9 @@ struct lsList {
 	bool lFlag;
 };
 
-unsigned getNumberLength(int number);
-
 struct lsList* lsListInit();
 
 void addLsFile(struct lsList* list, struct lsFile* file);
-
-void printSpaces(unsigned number);
 
 void printLsList(struct lsList* list);
 

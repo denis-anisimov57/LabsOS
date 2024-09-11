@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
 				lFlag = true;
 				break;
 			default:
-				printf("Unknown op\n");
+				fprintf(stderr, "Unknown op\n");
 				break;
 		}
 	}
@@ -36,7 +36,6 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 	struct dirent* dir = readdir(d);
-	int curWidth = 0;
 	struct stat d_info;
 	struct lsList* list = lsListInit();
 	list->lFlag = lFlag;
@@ -57,18 +56,20 @@ int main(int argc, char** argv) {
 		struct lsFile* file = lsFileInit();
 		setPermissions(file, d_info.st_mode);
 		file->name = malloc(sizeof(dir->d_name));
-		setUser(file, d_info.st_uid);
-		setGroup(file, d_info.st_gid);
-		setMTime(file, d_info.st_mtime);
-		file->numlink = d_info.st_nlink;
-		file->size = d_info.st_size;
-		strcpy(file->name, dir->d_name);	
-		if(file->permissions[0] == 'l') {
-				int linkRes = readlink(path, file->linkTo, sizeof(file->linkTo));
-				if(linkRes == -1) {
-					fprintf(stderr, "Link error\n");
-				}
-				file->linkTo[linkRes] = '\0';
+		strcpy(file->name, dir->d_name);
+		if(lFlag) {
+			setUser(file, d_info.st_uid);
+			setGroup(file, d_info.st_gid);
+			setMTime(file, d_info.st_mtime);
+			file->numlink = d_info.st_nlink;
+			file->size = d_info.st_size;
+			if(file->permissions[0] == 'l') {
+					int linkRes = readlink(path, file->linkTo, sizeof(file->linkTo));
+					if(linkRes == -1) {
+						fprintf(stderr, "Link error\n");
+					}
+					file->linkTo[linkRes] = '\0';
+			}
 		}
 		addLsFile(list, file);	
 		free(path);

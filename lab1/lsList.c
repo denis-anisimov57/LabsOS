@@ -1,9 +1,31 @@
 #include "lsList.h"
 
-char greenColor[] = "\x1b[32m";
-char blueColor[] = "\x1b[34m";
-char cyanColor[] = "\x1b[36m";
-char resetColor[] = "\x1b[0m";
+const char greenColor[] = "\x1b[32m";
+const char blueColor[] = "\x1b[34m";
+const char cyanColor[] = "\x1b[36m";
+const char resetColor[] = "\x1b[0m";
+
+void printSpaces(unsigned number) {
+	for(int i = 0; i < number; i++) {
+		printf(" ");
+	}
+}
+
+void printColor(int color) {
+	switch(color) {
+		case GREEN:
+			printf("%s", greenColor);
+			break;
+		case CYAN:
+			printf("%s", cyanColor);
+			break;
+		case BLUE:
+			printf("%s", blueColor);
+			break;
+		default:
+			break;
+	}	
+}
 
 unsigned getNumberLength(int number) {
 	if(number == 0) {
@@ -25,6 +47,10 @@ unsigned long getBlockSize(unsigned long size) {
 		return size / 1024;
 	}
 	return (size / 4096) * 4 + 4;
+}
+
+void writeMax(unsigned* a, unsigned b) {
+	*a = *a > b ? *a : b;
 }
 
 struct lsList* lsListInit() {
@@ -52,77 +78,50 @@ void addLsFile(struct lsList* list, struct lsFile* file) {
 		list->files = realloc(list->files, list->memSize * sizeof(struct lsFile*));
 	}
 	list->files[list->size - 1] = file;
-	unsigned length = getNumberLength(file->numlink);
-	list->maxNumLinksLength = length > list->maxNumLinksLength ? length : list->maxNumLinksLength;
-	length = getNumberLength(file->size);
-	list->maxSizeLength = length > list->maxSizeLength ? length : list->maxSizeLength;
-	length = strlen(file->name);
-	list->maxNameLength = length > list->maxNameLength ? length : list->maxNameLength;
-	length = strlen(file->user);
-	list->maxUserLength = length > list->maxUserLength ? length : list->maxUserLength;
-	length = strlen(file->group);
-	list->maxGroupLength = length > list->maxGroupLength ? length : list->maxGroupLength;
+	if(list->lFlag) {
+		writeMax(&list->maxNumLinksLength, getNumberLength(file->numlink));
+		writeMax(&list->maxSizeLength, getNumberLength(file->size));
+		writeMax(&list->maxNameLength, strlen(file->name));
+		writeMax(&list->maxUserLength, strlen(file->user));
+		writeMax(&list->maxGroupLength, strlen(file->group));
+		if(file->permissions[0] != 'l') {
+			list->totalFilesSize += getBlockSize(file->size);
+		}
+	}
 	int i = list->size - 2;
 	while(i >= 0 && strcmp(list->files[i + 1]->name, list->files[i]->name) < 0) {
 		list->files[i + 1] = list->files[i];
 		list->files[i] = file;
 		i--;
-	}
-	if(file->permissions[0] != 'l') {
-		list->totalFilesSize += getBlockSize(file->size);
-	}
-}
-
-void printSpaces(unsigned number) {
-	for(int i = 0; i < number; i++) {
-		printf(" ");
-	}
+	}	
 }
 
 void printLsList(struct lsList* list) {
 	if(list->lFlag) {
 		printf("total %lu\n", list->totalFilesSize);
-	}
-	for(int i = 0; i < list->size; i++) {
-		struct lsFile* file = list->files[i];
-		//printf("%s %lu %s %s %lu %s %s\n", file->permissions, file->numlink, file->user, file->group, file->size, file->mtime, file->name);
-		if(list->lFlag) {
+		for(int i = 0; i < list->size; i++) {
+			struct lsFile* file = list->files[i];
 			printf("%s ", file->permissions);
 			printSpaces(list->maxNumLinksLength - getNumberLength(file->numlink));
-			printf("%lu", file->numlink);
-			printf(" %s", file->user);
+			printf("%lu %s", file->numlink, file->user);
 			printSpaces(list->maxUserLength - strlen(file->user));
 			printf(" %s", file->group);
-			printSpaces(list->maxGroupLength - strlen(file->group));
-			printSpaces(list->maxSizeLength - getNumberLength(file->size));
-			printf(" %lu", file->size);
-			printf(" %s ", file->mtime);
-		}
-		switch(file->color) {
-			case GREEN:
-				printf("%s", greenColor);
-				break;
-			case CYAN:
-				printf("%s", cyanColor);
-				break;
-			case BLUE:
-				printf("%s", blueColor);
-				break;
-			default:
-				break;
-		}
-		printf("%s%s", file->name, resetColor);
-		if(!list->lFlag) {
-			printf("  ");
-		}
-		else {
+			printSpaces(list->maxGroupLength - strlen(file->group) + list->maxSizeLength - getNumberLength(file->size));
+			printf(" %lu %s ", file->size, file->mtime);
+			printColor(file->color);
+			printf("%s%s", file->name, resetColor);
 			if(file->permissions[0] == 'l') {
 				printf(" -> %s", file->linkTo);
 			}
 			printf("\n");
 		}
 	}
-	if(!list->lFlag) {
+	else {
+		for(int i = 0; i < list->size; i++) {
+			struct lsFile* file = list->files[i];
+			printColor(file->color);
+			printf("%s%s  ", file->name, resetColor);
+		}
 		printf("\n");
 	}
 }
