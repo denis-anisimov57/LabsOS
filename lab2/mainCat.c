@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 	}
 	FILE* fp = fopen(filename, "r");
 	if(fp == NULL) {
-		fprintf(stderr, "Can't open file");
+		fprintf(stderr, "Can't open file\n");
 		return -1;
 	}
 	char* line = NULL;

@@ -1,4 +1,5 @@
-cat: mycat.out
-	./mycat.out test.txt
-mycat.out: mainCat.c
-	gcc mainCat.c -o mycat.out
+all: myCat.out myGrep.out
+myCat.out: mainCat.c
+	gcc mainCat.c -o myCat.out
+myGrep.out: mainGrep.c
+	gcc mainGrep.c -o myGrep.out
