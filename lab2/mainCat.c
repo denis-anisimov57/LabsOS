@@ -66,14 +66,11 @@ int main(int argc, char** argv) {
 	ssize_t read = 0;
 	while((read = getline(&line, &len, fp)) != -1) {
 		if(bFlag) {
-			printf("    ");
-			printSpaces(lineNumberLength - getNumberLength(lineNumber));
 			if(read != 1) {
+				printf("    ");
 				lineNumber++;
+				printSpaces(lineNumberLength - getNumberLength(lineNumber));
 				printf("%u ", lineNumber);
-			}
-			else {
-				printf(" ");
 			}
 		}
 		else if(nFlag){
@@ -81,8 +78,14 @@ int main(int argc, char** argv) {
 			printf("    ");
 			printSpaces(lineNumberLength - getNumberLength(lineNumber));
 			printf("%u ", lineNumber);
-		}	
-		printf("%s", line);
+		}
+		if(EFlag) {
+			line[read - 1] = '$';
+			printf("%s\n", line);
+		}
+		else {
+			printf("%s", line);
+		}
 	}
 	if(line != NULL) {
 		free(line);
