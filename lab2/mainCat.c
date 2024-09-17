@@ -43,8 +43,13 @@ int main(int argc, char** argv) {
 	}
 	char* filename;
 	if(optind >= argc) {
-		fprintf(stderr, "No files provided\n");
-		return -1;
+		char* line = NULL;
+		size_t len = 0;
+		while(true) {
+			getline(&line, &len, stdin);
+			printf("%s", line);
+		}
+		return 0;
 	}
 	else {
 		filename = argv[optind];
