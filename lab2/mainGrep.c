@@ -50,11 +50,13 @@ int main(int argc, char** argv) {
 	if(argc == 2) {
 		char* line = NULL;
 		size_t len = 0;
-		while(true) {
-			getline(&line, &len, stdin);
+		while(getline(&line, &len, stdin) != -1) {
 			highlightPattern(line, pattern);
 		}
-	
+		if(line != NULL) {
+			free(line);
+		}
+		return 0;
 	}
 	char* filename = argv[2];
 	FILE* fp = fopen(filename, "r");
