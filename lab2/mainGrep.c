@@ -2,43 +2,39 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <regex.h>
 
 const char redColor[] = "\x1b[31m";
 const char resetColor[] = "\x1b[0m";
 
-size_t getPatternCount(char* str, char* pattern) {
-	size_t count = 0;
-	char* curPtr = strstr(str, pattern);
-	while(curPtr != NULL) {
-		count++;
-		curPtr = strstr(curPtr + 1, pattern);
-	}
-	return count;
-}
-
 void highlightPattern(char* line, char* pattern) {
-	char* patternPtr = strstr(line, pattern);
-	size_t prevN = 0;
-	size_t patternCount = 0;
-	char* resStr = NULL;
-	if(patternPtr != NULL) {
-		patternCount = getPatternCount(line, pattern);
-		resStr = calloc(1, strlen(line) + patternCount * (sizeof(redColor) + sizeof(resetColor)));
+    char *s = line;
+	regex_t regex;
+    regmatch_t pmatch[1];
+    regoff_t off = 0, len = 0;
+    regcomp(&regex, pattern, REG_NEWLINE);
+    while(regexec(&regex, s, sizeof(pmatch) / sizeof(pmatch[0]), pmatch, 0) == 0) { 
+        off = pmatch[0].rm_so + strlen(line) - strlen(s);
+        len = pmatch[0].rm_eo - pmatch[0].rm_so;
+		if(len == 0) {
+			if(s == line) {
+				printf("%s", s);
+			}
+			break;
+		}
+		char* beforePattern = calloc(1, pmatch[0].rm_so + 1);
+		char* foundPattern = calloc(1, len + 1);
+		strncpy(beforePattern, s, pmatch[0].rm_so);
+		strncpy(foundPattern, s + pmatch[0].rm_so, len);
+		printf("%s%s%s%s", beforePattern, redColor, foundPattern, resetColor);
+		free(beforePattern);
+		free(foundPattern);
+		s += pmatch[0].rm_eo;
+    }
+	if(s != line) {
+		printf("%s", s);
 	}
-	while(patternPtr != NULL) {
-		size_t n = strlen(line) - strlen(patternPtr);
-		strncat(resStr, line + prevN, n - prevN);
-		strcat(resStr, redColor);
-		strcat(resStr, pattern);
-		strcat(resStr, resetColor);
-		patternPtr = strstr(patternPtr + 1, pattern);
-		prevN = n + strlen(pattern);
-	}
-	if(resStr != NULL) {
-		strcat(resStr, line + prevN);
-		printf("%s", resStr);
-		free(resStr);
-	}
+	regfree(&regex);
 }
 
 int main(int argc, char** argv) {
@@ -46,12 +42,18 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "No pattern provided\n");
 		return -1;
 	}
-	char* pattern = argv[1];
+	regex_t regex;
+	if (regcomp(&regex, argv[1], REG_NEWLINE)) {
+		fprintf(stderr, "Invalid pattern\n");
+		regfree(&regex);
+		return -1;
+	}
+	regfree(&regex);
 	if(argc == 2) {
 		char* line = NULL;
 		size_t len = 0;
 		while(getline(&line, &len, stdin) != -1) {
-			highlightPattern(line, pattern);
+			highlightPattern(line, argv[1]);
 		}
 		if(line != NULL) {
 			free(line);
@@ -67,9 +69,9 @@ int main(int argc, char** argv) {
 	char* line = NULL;
 	size_t len = 0;
 	ssize_t read = 0;
-	while((read = getline(&line, &len, fp)) != -1) {
-		highlightPattern(line, pattern);
-	}	
+	while(getline(&line, &len, fp) != -1) {
+		highlightPattern(line, argv[1]);
+	}
 	if(line != NULL) {
 		free(line);
 	}
