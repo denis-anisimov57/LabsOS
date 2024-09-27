@@ -19,8 +19,12 @@ void signalHandler(int sig) {
 	printf("[signal] Signal %d recieved\n", sig);
 }
 
-void sigactionHandler(int sig) {
-	printf("[sigaction] Signal %d recieved\n", sig);
+void sigactionHandler(int sig, siginfo_t* siginfo, void* context) {	
+	(void)context;
+	printf("[sigactionHandler] Signal %d recieved\n", sig);
+	printf("----------\n");
+	printf("[sigactionHandler] INFO:\nSignal number: %d\nErrno value: %d\nSending pid: %u\nSending uid: %u\nExit value: %d\n", siginfo->si_signo, siginfo->si_errno, siginfo->si_pid, siginfo->si_uid, siginfo->si_status);
+	printf("----------\n");
 }
 
 int main(int argc, char** argv) {
@@ -32,7 +36,8 @@ int main(int argc, char** argv) {
 	signal(SIGINT, signalHandler);
 	
 	struct sigaction newAct;
-	newAct.sa_handler = sigactionHandler;
+	newAct.sa_flags = SA_SIGINFO;
+	newAct.sa_sigaction = sigactionHandler;
 	sigaction(SIGTERM, &newAct, NULL);
 	
 	int res = 0;
