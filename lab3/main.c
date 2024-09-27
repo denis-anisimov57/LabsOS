@@ -7,29 +7,35 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-void func() {
-	printf("I'm at exit 1 for process %d\n", getpid());
+void atExitHandler() {
+	printf("[atexit] Called atexit for process %d\n", getpid());
 }
 
-void func2() {
-	printf("I'm at exit 2 for process %d\n", getpid());
+void onExitHandler() {
+	printf("[on_exit] Called on_exit for process %d\n", getpid());
 }
 
-void handler(int sig) {
-	printf("Signal %d recieved\n", sig);
+void signalHandler(int sig) {
+	printf("[signal] Signal %d recieved\n", sig);
 }
 
-void newActHandler(int sig) {
-	printf("Signal %d recieved with sigaction\n", sig);
+void sigactionHandler(int sig) {
+	printf("[sigaction] Signal %d recieved\n", sig);
 }
 
 int main(int argc, char** argv) {
 	(void)argc; (void)argv;
 
-	int res = 0;
-	atexit(func);
-	atexit(func2);
+	atexit(atExitHandler);
+	on_exit(onExitHandler, NULL);
+
+	signal(SIGINT, signalHandler);
 	
+	struct sigaction newAct;
+	newAct.sa_handler = sigactionHandler;
+	sigaction(SIGTERM, &newAct, NULL);
+	
+	int res = 0;
 	switch(res = fork()) {
 		case -1: {
 			int err = errno;
@@ -48,13 +54,6 @@ int main(int argc, char** argv) {
 			break;
 		}
 	}
-	
-	signal(SIGINT, handler);
-	
-	struct sigaction newAct;
-	newAct.sa_handler = newActHandler;
-	sigaction(SIGTERM, &newAct, NULL);
 	sleep(10);
-	
 	return 0;
 }
