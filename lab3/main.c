@@ -5,10 +5,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/wait.h>
-
-//kill -l // list of signals
-// kill -15 <pid> // kill pid with SIGTERM
-//sigaction
+#include <signal.h>
 
 void func() {
 	printf("I'm at exit 1 for process %d\n", getpid());
@@ -20,7 +17,10 @@ void func2() {
 
 void handler(int sig) {
 	printf("Signal %d recieved\n", sig);
-//	signal(SIGINT, handler);
+}
+
+void newActHandler(int sig) {
+	printf("Signal %d recieved with sigaction\n", sig);
 }
 
 int main(int argc, char** argv) {
@@ -28,24 +28,19 @@ int main(int argc, char** argv) {
 
 	int res = 0;
 	atexit(func);
-	//signal(SIGINT, handler);
-
+	atexit(func2);
+	
 	switch(res = fork()) {
 		case -1: {
 			int err = errno;
 			fprintf(stderr, "Fork error: %s (%d)\n", strerror(err), err);
 			break;
 		}
-		case 0:
-			//sleep(1000);
-			sleep(3);
-			atexit(func2);
+		case 0: {
 			printf("[CHILD] I'm child of %d, my pid is %d\n", getppid(), getpid());
-			//return 1;
 			break;
+		}
 		default: {
-//			signal(SIGINT, handler);
-			signal(SIGINT, SIG_IGN);
 			int cres;
 			wait(&cres);
 			printf("[PARENT] I'm parent of %d, my pid is %d, my parent pid is %d\n", res, getpid(), getppid());
@@ -53,5 +48,13 @@ int main(int argc, char** argv) {
 			break;
 		}
 	}
+	
+	signal(SIGINT, handler);
+	
+	struct sigaction newAct;
+	newAct.sa_handler = newActHandler;
+	sigaction(SIGTERM, &newAct, NULL);
+	sleep(10);
+	
 	return 0;
 }
