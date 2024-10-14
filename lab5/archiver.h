@@ -1,5 +1,6 @@
 #pragma once
 #include <sys/types.h>
+#include <stdbool.h>
 
 struct arFile {
 	char* name;
@@ -25,7 +26,11 @@ void pushArFile(struct Archiver* ar, struct arFile* file);
 
 struct arFile* parseHeader(const char* header);
 
-void removeFromArchiver(struct Archiver* ar, const char* filename);
+bool createArFile(struct arFile* file);
+
+void removeFromArchiver(struct Archiver* ar, const char* filename, bool isExtract);
+
+void printArFile(struct arFile* file);
 
 void printArchiver(struct Archiver* ar);
 

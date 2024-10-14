@@ -5,21 +5,34 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <stdbool.h>
 
 const unsigned HEADER_SIZE = 512;
 
+char* pathToName(const char* filePath) {
+	char* cur = strchr(filePath, '/');
+	char* prev = (char*)filePath;
+	while(cur != NULL) {
+		prev = cur + 1;
+		cur = strchr(prev, '/');
+	}
+	char* filename = (char*)calloc(1, strlen(prev) + 1);
+	strcpy(filename, prev);
+	return filename;
+}
+
 struct arFile* parseHeader(const char* header) {
 	struct arFile* file = (struct arFile*)calloc(1, sizeof(struct arFile));
-	char* curIndex = strchr(header, ';');
+	char* curIndex = strchr(header, '/');
 	int statLen = strlen(header) - strlen(curIndex);
 	file->name = (char*)calloc(1, statLen + 1);
 	strncpy(file->name, header, statLen);
 	sscanf(curIndex + 1, "%u", &file->mode); 
-	curIndex = strchr(curIndex + 1, ';');
+	curIndex = strchr(curIndex + 1, '/');
 	sscanf(curIndex + 1, "%d", &file->userId);
-	curIndex = strchr(curIndex + 1, ';');
+	curIndex = strchr(curIndex + 1, '/');
 	sscanf(curIndex + 1, "%d", &file->groupId);
-	curIndex = strchr(curIndex + 1, ';');
+	curIndex = strchr(curIndex + 1, '/');
 	sscanf(curIndex + 1, "%d", &file->size);
 	file->content = (char*)calloc(1, file->size + 1);
 	return file;
@@ -35,7 +48,6 @@ void pushArFile(struct Archiver* ar, struct arFile* file) {
 		ar->capacity *= 2;
 		ar->files = (struct arFile**)realloc(ar->files, ar->capacity * sizeof(struct arFile*));
 	}
-	printf("File: %s %u %d %d %d\n%s\n", file->name, file->mode, file->userId, file->groupId, file->size, file->content);
 	ar->files[ar->size - 1] = file;
 }
 
@@ -58,7 +70,6 @@ struct Archiver* initArchiver(const char* arPath) {
 		read(fd, fileHeader, HEADER_SIZE);
 		struct arFile* file = parseHeader(fileHeader);
 		read(fd, file->content, file->size - 1);
-		getchar();
 		pushArFile(ar, file);
 	}
 	free(fileHeader);
@@ -67,15 +78,15 @@ struct Archiver* initArchiver(const char* arPath) {
 }
 
 void addToArchiver(struct Archiver* ar, const char* filePath) {
+	int addfd = open(filePath, O_RDONLY);
+	if(addfd == -1) {
+		perror("Can't open file\n");
+		return;
+	}
 	struct stat st;
 	int statRes = stat(filePath, &st);
 	if(statRes == -1) {
 		fprintf(stderr, "Stat error\n");
-		return;
-	}
-	int addfd = open(filePath, O_RDONLY);
-	if(addfd == -1) {
-		fprintf(stderr, "Can't open file to input\n");
 		return;
 	}
 	struct arFile* file = (struct arFile*)calloc(1, sizeof(struct arFile));
@@ -84,10 +95,9 @@ void addToArchiver(struct Archiver* ar, const char* filePath) {
 	file->content = (char*)calloc(1, fileSize);
 	read(addfd, file->content, fileSize);
 	close(addfd);
-	// check if exist?
-	// filename = pathToName(filePath);
-	file->name = (char*)calloc(1, strlen(filePath) + 1);
-	strcpy(file->name, filePath);
+
+	file->name = pathToName(filePath);
+	removeFromArchiver(ar, file->name, false);
 	file->mode = st.st_mode;
 	file->userId = st.st_uid;
 	file->groupId = st.st_gid;
@@ -95,15 +105,61 @@ void addToArchiver(struct Archiver* ar, const char* filePath) {
 	pushArFile(ar, file);
 }
 
-void removeFromArchiver(struct Archiver* ar, const char* filename) {
+bool createArFile(struct arFile* file) {
+	int fd = open(file->name, O_RDWR | O_CREAT | O_EXCL, file->mode);
+	if(fd == -1) {
+		perror("Can't create file\n");
+		return false;
+	}
+	write(fd, file->content, strlen(file->content));
+	close(fd);
+	return true;
+}
 
+void removeFromArchiver(struct Archiver* ar, const char* filename, bool isExtract) {	
+	for(unsigned long i = 0; i < ar->size; i++) {
+		if(strcmp(ar->files[i]->name, filename) == 0) {
+			if(isExtract) {
+				if(!createArFile(ar->files[i])) return;
+			}
+			delArFile(ar->files[i]);
+			if(i != ar->size - 1) {
+				ar->files[i] = ar->files[ar->size - 1];
+			}
+			ar->size--;
+			break;
+		}
+	}
+}
+
+void printArFile(struct arFile* file) {
+	printf("Filename: %s; mode: %u; uid: %d; gid: %d; size: %d;\n", file->name, file->mode, file->userId, file->groupId, file->size);
 }
 
 void printArchiver(struct Archiver* ar) {
-
+	for(unsigned long i = 0; i < ar->size; i++) {
+		printArFile(ar->files[i]);
+	}
 }
 
 void saveArchive(struct Archiver* ar) {
+	int fd = open(ar->name, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	if(fd == -1) {
+		perror("Can't open archive\n");
+		return;
+	}
+	for(unsigned long i = 0; i < ar->size; i++) {
+		char* fileHeader = (char*)calloc(1, HEADER_SIZE + 1);
+		struct arFile* file = ar->files[i];
+		int headerLen = sprintf(fileHeader, "%s/%u/%d/%d/%d", file->name, file->mode, file->userId, file->groupId, file->size);	
+		for(unsigned i = headerLen; i < HEADER_SIZE; i++) {
+			fileHeader[i] = '-';
+		}
+		write(fd, fileHeader, strlen(fileHeader));
+		write(fd, file->content, strlen(file->content));	
+		free(fileHeader);
+	}
+	close(fd);
 
 }
 
