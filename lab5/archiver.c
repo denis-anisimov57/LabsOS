@@ -60,7 +60,6 @@ struct Archiver* initArchiver(const char* arPath) {
 	ar->capacity = 0;
 	ar->size = 0;
 	if(fd == -1) {
-		close(fd);
 		return ar;
 	}
 	int arSize = lseek(fd, 0, SEEK_END);
@@ -86,6 +85,7 @@ void addToArchiver(struct Archiver* ar, const char* filePath) {
 	struct stat st;
 	int statRes = stat(filePath, &st);
 	if(statRes == -1) {
+		close(addfd);
 		fprintf(stderr, "Stat error\n");
 		return;
 	}
@@ -111,6 +111,7 @@ bool createArFile(struct arFile* file) {
 		perror("Can't create file\n");
 		return false;
 	}
+	fchmod(fd, file->mode);
 	write(fd, file->content, strlen(file->content));
 	close(fd);
 	return true;

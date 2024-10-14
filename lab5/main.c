@@ -7,6 +7,13 @@ void errMsg() {
 	printf("Try ./archiver.out -h or ./archiver.out --help\n");		
 }
 
+void printManual() {
+	printf("./archiver.out -h(--help)				print manual to archiver.out\n"
+	"./archiver.out <archiveName> -s(--stat)			print archive status\n"
+	"./archiver.out <archiveName> -i(--input) <file>		add <file> to <archiveName>\n"
+	"./archiver.out <archiveName> -e(--extract) <file>	extract <file> from <archiveName> to current directory\n");
+}
+
 int main(int argc, char** argv) {
 	if(argc < 2) {
 		errMsg();
@@ -14,7 +21,8 @@ int main(int argc, char** argv) {
 	}
 	if(argc == 2) {
 		if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
-			printf("Manual: ...\n"); // print manual to archiver
+			printf("Manual:\n");
+			printManual();
 			return 0;
 		}
 		else {
