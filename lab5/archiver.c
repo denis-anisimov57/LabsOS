@@ -68,7 +68,7 @@ struct Archiver* initArchiver(const char* arPath) {
 	while(lseek(fd, 0, SEEK_CUR) != arSize) {
 		read(fd, fileHeader, HEADER_SIZE);
 		struct arFile* file = parseHeader(fileHeader);
-		read(fd, file->content, file->size - 1);
+		read(fd, file->content, file->size);
 		pushArFile(ar, file);
 	}
 	free(fileHeader);
@@ -112,7 +112,7 @@ bool createArFile(struct arFile* file) {
 		return false;
 	}
 	fchmod(fd, file->mode);
-	write(fd, file->content, strlen(file->content));
+	write(fd, file->content, file->size);
 	close(fd);
 	return true;
 }
@@ -156,8 +156,8 @@ void saveArchive(struct Archiver* ar) {
 		for(unsigned i = headerLen; i < HEADER_SIZE; i++) {
 			fileHeader[i] = '-';
 		}
-		write(fd, fileHeader, strlen(fileHeader));
-		write(fd, file->content, strlen(file->content));	
+		write(fd, fileHeader, HEADER_SIZE);
+		write(fd, file->content, file->size);	
 		free(fileHeader);
 	}
 	close(fd);
