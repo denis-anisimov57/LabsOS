@@ -8,6 +8,8 @@ struct arFile {
 	int userId;
 	int groupId;
 	int size;
+	time_t atime;
+	time_t mtime;
 	char* content;
 };
 

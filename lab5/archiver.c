@@ -1,4 +1,5 @@
 #include "archiver.h"
+#include <utime.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,6 +33,10 @@ struct arFile* parseHeader(const char* header) {
 	sscanf(curIndex + 1, "%d", &file->userId);
 	curIndex = strchr(curIndex + 1, '/');
 	sscanf(curIndex + 1, "%d", &file->groupId);
+	curIndex = strchr(curIndex + 1, '/');
+	sscanf(curIndex + 1, "%ld", &file->atime);
+	curIndex = strchr(curIndex + 1, '/');
+	sscanf(curIndex + 1, "%ld", &file->mtime);
 	curIndex = strchr(curIndex + 1, '/');
 	sscanf(curIndex + 1, "%d", &file->size);
 	file->content = (char*)calloc(1, file->size + 1);
@@ -90,9 +95,9 @@ void addToArchiver(struct Archiver* ar, const char* filePath) {
 		return;
 	}
 	struct arFile* file = (struct arFile*)calloc(1, sizeof(struct arFile));
-	int fileSize = lseek(addfd, 0, SEEK_END) + 1;
+	int fileSize = lseek(addfd, 0, SEEK_END);
 	lseek(addfd, 0, 0);
-	file->content = (char*)calloc(1, fileSize);
+	file->content = (char*)calloc(1, fileSize + 1);
 	read(addfd, file->content, fileSize);
 	close(addfd);
 
@@ -102,6 +107,8 @@ void addToArchiver(struct Archiver* ar, const char* filePath) {
 	file->userId = st.st_uid;
 	file->groupId = st.st_gid;
 	file->size = fileSize;
+	file->atime = st.st_atime;
+	file->mtime = st.st_mtime;
 	pushArFile(ar, file);
 }
 
@@ -114,6 +121,12 @@ bool createArFile(struct arFile* file) {
 	fchmod(fd, file->mode);
 	write(fd, file->content, file->size);
 	close(fd);
+
+	struct utimbuf new_time;
+	new_time.actime = file->atime;
+	new_time.modtime = file->mtime;
+	utime(file->name, &new_time);
+	
 	return true;
 }
 
@@ -152,7 +165,7 @@ void saveArchive(struct Archiver* ar) {
 	for(unsigned long i = 0; i < ar->size; i++) {
 		char* fileHeader = (char*)calloc(1, HEADER_SIZE + 1);
 		struct arFile* file = ar->files[i];
-		int headerLen = sprintf(fileHeader, "%s/%u/%d/%d/%d", file->name, file->mode, file->userId, file->groupId, file->size);	
+		int headerLen = sprintf(fileHeader, "%s/%u/%d/%d/%ld/%ld/%d", file->name, file->mode, file->userId, file->groupId, file->atime, file->mtime, file->size);	
 		for(unsigned i = headerLen; i < HEADER_SIZE; i++) {
 			fileHeader[i] = '-';
 		}
