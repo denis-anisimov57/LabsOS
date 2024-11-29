@@ -18,7 +18,7 @@ void* thread_read(void* arg) {
 	while(count < ARR_SIZE) {
 		usleep(10000);
 		pthread_mutex_lock(&mtx);
-		printf("%i: ", (pid_t)gettid());
+		printf("%li: ", pthread_self());
 		for(int i = 0; i < ARR_SIZE; i++) {
 			printf("%d ", mas[i]);
 		}

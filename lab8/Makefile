@@ -1,2 +1,2 @@
 mutexLab.out: main.c
-	gcc main.c -o mutexLab.out -lpthread -Wall -Wextra
+	gcc main.c -lpthread -o mutexLab.out -lpthread -Wall -Wextra
